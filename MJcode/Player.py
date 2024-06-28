@@ -8,41 +8,109 @@ import random
 from CheckWin import win
 import copy
 from typing import List
+from action import action
+from checkAction import checkAction
+from Color import Color
 
-All = [str(i) + j for i in range(1, 10) for j in ("万", "条", "筒")]
-All.sort(key=lambda x: (x[1], x[0]))
+
 
 
 class Player:
-    def __init__(self, cards, throw):
-        self.dice = random.randint(2, 12)
+    def __init__(self,name,cards, throw):
+        self.name=name
         self.cards = cards
         self.throw = throw  # 定缺
         self.gangflag = 0
+        self.pengflag = 0   #碰标记
         self.Hu = 0
         self.pengList = []
         self.gangList = []
+        self.tingList=win.updateTingList(self.cards,self.throw)
+    
+    def show(self):
+        print(f"{self.name}的手牌为：")
+        Color.print_colored_cards(self.cards)
+        print(f"缺为:{self.throw}")
+        print(f"{self.name}的碰牌为：{self.pengList}，杠牌为：{self.gangList},听牌为：{self.tingList}")
+        print()
+        
+    def play(self,game_manager):
+        self.show()
+        card=action.get_newCard(self,game_manager) 
+        self.show()
+        if card==-1:
+            print("本轮流局，游戏结束！")
+            return -1
+        
+        if checkAction.check_Hu(self,card):
+            action.Hu(self,card)
+            return -1 
+                
+        else:
+            
+            if checkAction.check_AnGang(self,card):
+                player_input=input("是否选择暗杠？(输入 'yes' 表示暗杠，'no' 表示不暗杠): ")
+                if player_input.lower()=='yes':
+                    action.AnGang(self,card)
+                    self.play(game_manager)
+                    
+                
+            if checkAction.check_BaGang(self,card):
+                player_input=("是否选择粑杠？(输入 'yes' 表示粑杠，'no' 表示不粑杠): ") 
+                if player_input.lower()=='yes':
+                    action.BaGang(self,card)
+                    self.play(game_manager)
+            return action.play_card(self)
+                 
+            
 
-    def get_newCard(self, card):
-        print(f"你摸到了: {card}")
-        self.cards.append(card)
-        # print(self.cards)
-        self.cards.sort(key=lambda x: (x[1], x[0]))
-        print(f"当前您的牌为：{self.cards},张数为：{len(self.cards)}")
-        print(f"你的碰牌为：{self.pengList}，杠牌为：{self.gangList}")
-        self.play_card()
+           
+                
+    def wait(self, card):   
+        if checkAction.check_Hu(self, card):
+            self.show()
+            action.Hu(self, card)
+            return "Hu"   
+        if checkAction.check_Peng(self, card):
+            self.show()
+            player_input = input(f"{self.name}是否选择碰？(输入 'yes' 表示碰，'no' 表示不碰): ")
+            if player_input.lower() == 'yes':
+                action.Peng(self, card)
+                
+                return "Peng"
+        if checkAction.check_Gang(self, card):
+            self.show()
+            player_input = input("f{self.name}是否选择杠？(输入 'yes' 表示杠): ")
+            if  player_input.lower() == 'yes':
+                action.Gang(self, card)  
+                    
+                return "Gang"   
+            
+            
+        
+        
+            
 
-        # 操作 暗杠？ 自摸？
+   
+  
+    
 
-    def play_card(self):
-        out = input("请你打出一张牌：")
-        print(f"你打出了一张 {out}")
-        self.cards.remove(out)
+ 
+        
 
+
+    def check_Pao(self, tmpCard, card: str, isOther: bool) -> bool:
+        return win(self.throw, tmpCard, card, isOther).check()
+    
+    
+    
+   
+    
+    
     def judge(self, other_card): # 用于判定机器人打出的牌
         result = ""
         tmpCard = copy.deepcopy(self.cards)
-        # tmpCard = self.cards  深浅拷贝错误！
+       
         tmpCard.append(other_card)
         self.isPao = self.check_Pao(tmpCard,other_card,isOther=True) #判定
 
@@ -79,25 +147,4 @@ class Player:
                     break
 
 
-    def Peng(self, card: str):
-        peng_list = [card] * 3
-        self.pengList.append(peng_list)
-        for _ in range(2):
-            self.cards.remove(card)
-        self.play_card()  # 碰了打出一张牌
 
-    def Gang(self, card: str):
-        gang_list = [card] * 4
-        self.gangList.append(gang_list)
-        for _ in range(3):
-            self.cards.remove(card)
-        self.gangflag = 1 #杠标记为 1
-
-        # 还需实现：
-        # 1. 摸牌
-        # 2. 打牌
-        # 3. 杠上开花？
-
-
-    def check_Pao(self, tmpCard, card: str, isOther: bool) -> bool:
-        return win(self.throw, tmpCard, card, isOther).check()
